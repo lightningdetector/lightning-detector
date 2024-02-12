@@ -1,0 +1,177 @@
+ 
+Pagina home
+ 
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema di Lampi</title>
+  /* Cambiato il colore di sfondo a bianco */
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #fff; 
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+     .container {
+      background-color: #fff;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .logo {
+      height: 150px;
+      margin-bottom: 20px;
+    }
+
+    .variables {
+      text-align: left;
+      width: 320px;
+    }
+
+    .variable {
+      margin-bottom: 10px;
+      font-size: 20px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .variable span:first-child {
+      color: #555;
+    }
+
+    .note {
+      margin-top: 20px;
+      color: #666;
+      font-style: italic;
+    }
+  </style>
+</head>
+<!-- tabella -->
+<body>
+  <div class="container">
+    <img src="logo.jpg" alt="Logo" class="logo">
+    <h1>Visualizzatore Dati Fulmini 🌩️</h1>
+    <h2>Ultimo Fulmine :</h2> 
+    <div class="variables">
+      <div class="variable">
+        <span>Anno 🗓️:</span>
+        <span id="year"></span>
+      </div>
+      <div class="variable">
+        <span>Mese 🗓️:</span>
+        <span id="month"></span>
+      </div>
+      <div class="variable">
+        <span>Distanza (km) 🗺️:</span>
+        <span id="distance"></span>
+      </div>
+      <div class="variable">
+        <span>Data e Ora ⏱️:</span>
+        <span id="timestamp"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <p>Creato da Pignat Michele e Vuattolo Matteo 3ELT_A 2023/2024</p>
+    <p>coordinatore progetto prof.ing.Comuzzi Stefano</p>
+  </div>
+  <!-- configurazione fiebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.2/firebase-database-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCjtTR-s_bzCSlTkcx3QiTPJEl8E_VPJ5Y",
+      authDomain: "prova-2-2588a.firebaseapp.com",
+      databaseURL: "https://prova-2-2588a-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "prova-2-2588a",
+      storageBucket: "prova-2-2588a.appspot.com",
+      messagingSenderId: "543082893125",
+      appId: "1:543082893125:web:11e090eb9a42fc843eb82c"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const dataRef = firebase.database().ref('/il-tuo-progetto/lightning/data');
+    const yearElement = document.getElementById('year');
+    const monthElement = document.getElementById('month');
+    const distanceElement = document.getElementById('distance');
+    const timestampElement = document.getElementById('timestamp');
+
+    function parseLightningInfo(infoString) {
+      const [yearPart, monthPart, distancePart, timestampPart] = infoString.split(', ');
+
+      const year = yearPart.split(': ')[1];
+      const month = monthPart.split(': ')[1];
+      const distance = distancePart.split(': ')[1];
+      const timestamp = timestampPart.split(': ')[1];
+
+      return [year, month, distance, timestamp];
+    }
+
+    function updateLatestLightning(latestItem) {
+      const [year, month, distance, timestamp] = latestItem;
+
+      // Aggiorna direttamente il contenuto delle celle
+      yearElement.textContent = year;
+      monthElement.textContent = month;
+      distanceElement.textContent = distance;
+      timestampElement.textContent = new Date(timestamp).toLocaleString();
+    }
+
+    function loadDataForYear() {
+      dataRef.once('value', (snapshot) => {
+        const data = snapshot.val();
+        let latestItem = null;
+
+        for (const year in data) {
+          const yearData = data[year];
+
+          for (const month in yearData) {
+            const monthData = yearData[month];
+
+            for (const key in monthData) {
+              const lightningInfo = monthData[key].value;
+              const parsedItem = parseLightningInfo(lightningInfo);
+
+              if (!latestItem || new Date(parsedItem[3]) > new Date(latestItem[3])) {
+                latestItem = parsedItem;
+              }
+            }
+          }
+        }
+
+        if (latestItem) {
+          updateLatestLightning(latestItem);
+        }
+      });
+    }
+   document.addEventListener('DOMContentLoaded', () => {
+      loadDataForYear();
+    });
+  </script>
+</body>
+</html>
+
+ 
+
+
+ 

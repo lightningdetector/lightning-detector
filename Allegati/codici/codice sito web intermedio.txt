@@ -1,0 +1,123 @@
+•	CODICE SITO WEB INTERMEDIO
+I dati salvati su Firebase verranno visualizzati su un sito html creato ad hoc.
+Il codice è composto da 3 parti:
+-index
+-pagina home
+-database
+index: 
+
+ 
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>lightning_system</title>
+    <style>
+        /* Stile pagina */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .tabs {
+            display: flex;
+            justify-content: cen;
+            align-items: center;
+            height: 50px;
+            background-color: #333;
+            color: #fff;
+        }
+
+        .tab {
+            cursor: pointer;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+
+
+        .tab:hover {
+            background-color: #555;
+        }
+
+        .tab.active {
+            background-color: #555;
+        }
+
+        .tab-content {
+            display: none;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: absolute;
+            top: 50px; 
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        .tab-content iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!--Schede -->
+    <div class="tabs">
+        <div class="tab" onclick="showTab('sezione1')">HOME 🏠</div>
+        <div class="tab" onclick="showTab('sezione2')">DATABASE 📂</div>
+    </div>
+
+    <!-- Contenitore delle Schede -->
+    <div id="sezione1" class="tab-content">
+       
+        <!-- Contenuto della Scheda 1 -->
+        <iframe src="scheda_home.html"></iframe>
+    </div>
+
+    <div id="sezione2" class="tab-content" style="display:none;">
+        <!-- Contenuto della Scheda 2 -->
+        <iframe src="scheda2.html"></iframe>
+    </div>
+
+    <script>
+        // Funzione per mostrare la scheda corrispondente
+        function showTab(tabId) {
+            // Nascondi tutte le schede
+            var tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(function (tab) {
+                tab.style.display = 'none';
+            });
+
+            // Attiva la scheda selezionata
+            document.getElementById(tabId).style.display = 'block';
+
+            // Aggiorna la classe attiva nei tab
+            var tabButtons = document.querySelectorAll('.tab');
+            tabButtons.forEach(function (button) {
+                button.classList.remove('active');
+            });
+
+            var activeButton = document.querySelector('.tab[data-tab="' + tabId + '"]');
+            if (activeButton) {
+                activeButton.classList.add('active');
+            }
+        }
+
+        // Mostra la scheda "sezione1" all'avvio della pagina
+        document.addEventListener("DOMContentLoaded", function () {
+            showTab('sezione1');
+        });
+    </script>
+
+</body>
+</html>
+ 
+
