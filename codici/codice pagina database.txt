@@ -1,0 +1,196 @@
+ 
+
+Database  
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lightning System</title>
+  <script src="https://www.gstatic.com/firebasejs/9.6.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.2/firebase-database-compat.js"></script>
+ //stile scheda
+ <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      margin: 20;
+      padding: 20;
+      background-color: #f8f8f8;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+      display: flex;
+      align-items: center;
+    }
+
+    img {
+      height: 100px;
+      margin-right: 10px;
+    }
+
+    label {
+      display: block;
+      margin: 10px 0;
+    }
+
+    select {
+      padding: 8px;
+      font-size: 16px;
+    }
+
+    #lightningTable {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    #lightningTable th, #lightningTable td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+
+    #lightningTable th {
+      background-color: #f2f2f2;
+    }
+
+    #lightningTable tbody tr:hover {
+      background-color: #f5f5f5;
+    }
+
+    .note {
+      margin-top: 20px;
+      color: #000000;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <h1>
+    <img src="logo.jpg" alt="Logo">
+    Lightning Data Viewer
+  </h1>
+
+  <label for="yearSelector">Select Year:</label>
+  <select id="yearSelector" onchange="loadDataForYear()"></select>
+
+  <table id="lightningTable">
+    <thead>
+      <tr>
+        <th>ANNO</th>
+        <th>MESE</th>
+        <th>DISTANZA (km)</th>
+        <th>DATA E ORA</th>
+        <th>FULMINI TOTALI SESSIONE</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div class="note">
+    <p>Creato da Pignat Michele e Vuattolo Matteo 3ELT_A 2023/2024.</p>
+  </div>
+  // inizializzazione firebase
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCjtTR-s_bzCSlTkcx3QiTPJEl8E_VPJ5Y",
+      authDomain: "prova-2-2588a.firebaseapp.com",
+      databaseURL: "https://prova-2-2588a-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "prova-2-2588a",
+      storageBucket: "prova-2-2588a.appspot.com",
+      messagingSenderId: "543082893125",
+      appId: "1:543082893125:web:11e090eb9a42fc843eb82c"
+    };
+    // tabella
+    firebase.initializeApp(firebaseConfig);
+    const dataRef = firebase.database().ref('/il-tuo-progetto/lightning/data');
+
+    function parseLightningInfo(infoString) {
+      const [yearPart, monthPart, distancePart, timestampPart, totalLightningPart] = infoString.split(', ');
+
+      const year = yearPart.split(': ')[1];
+      const month = monthPart.split(': ')[1];
+      const distance = distancePart.split(': ')[1];
+      const timestamp = timestampPart.split(': ')[1];
+      const totalLightning = totalLightningPart.split(': ')[1];
+
+      return [year, month, distance, timestamp, totalLightning];
+    }
+
+    function loadDataForYear() {
+      const selectedYear = document.getElementById('yearSelector').value;
+
+      dataRef.child(selectedYear).on('value', (snapshot) => {
+        const data = snapshot.val();
+        const lightningTableBody = document.querySelector('#lightningTable tbody');
+
+        lightningTableBody.innerHTML = '';
+        let dataArray = [];
+
+        for (const month in data) {
+          const monthData = data[month];
+
+          for (const key in monthData) {
+            const lightningInfo = monthData[key].value;
+            const [parsedYear, parsedMonth, distance, timestamp, totalLightning] = parseLightningInfo(lightningInfo);
+
+            dataArray.push({
+              year: parsedYear,
+              month: parsedMonth,
+              distance: distance,
+              timestamp: new Date(timestamp),
+              totalLightning: totalLightning
+            });
+          }
+        }
+
+        dataArray.sort((a, b) => b.timestamp - a.timestamp);
+
+        dataArray.forEach((item) => {
+          const row = lightningTableBody.insertRow();
+          const cellYear = row.insertCell(0);
+          const cellMonth = row.insertCell(1);
+          const cellDistance = row.insertCell(2);
+          const cellTimestamp = row.insertCell(3);
+          const cellTotalLightning = row.insertCell(4);
+
+          cellYear.textContent = item.year;
+          cellMonth.textContent = item.month;
+          cellDistance.textContent = item.distance;
+          cellTimestamp.textContent = item.timestamp.toLocaleString();
+          cellTotalLightning.textContent = item.totalLightning;
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      populateYearSelector();
+    });
+
+    function populateYearSelector() {
+      dataRef.once('value', (snapshot) => {
+        const data = snapshot.val();
+        const yearSelector = document.getElementById('yearSelector');
+
+        yearSelector.innerHTML = '';
+        const years = Object.keys(data).sort();
+
+        years.forEach((year) => {
+          const option = document.createElement('option');
+          option.value = year;
+          option.textContent = year;
+          yearSelector.appendChild(option);
+
+          if (year === '2024') {
+            option.selected = true;
+          }
+        });
+
+        loadDataForYear();
+      });
+    }
+  </script>
+</body>
+</html>

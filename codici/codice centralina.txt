@@ -1,0 +1,154 @@
+•	CODICE CENTRALINA
+La centralina funziona grazie ad un Raspberry che invia i dati ad un servizio di real-time database fornito dal servizio di Google Firebase.
+•	CODICE:
+'''
+ 
+ # @file DFRobot_AS3935_detailed.py
+ # @brief SEN0290 Lightning Sensor
+ # @n This sensor can detect lightning and display the distance and intensity of the lightning within 40 km
+ # @n It can be set as indoor or outdoor mode.
+ # @n The module has three I2C, these addresses are:
+ # @n  AS3935_ADD1  0x01   A0 = 1  A1 = 0
+ # @n  AS3935_ADD2  0x02   A0 = 0  A1 = 1
+ # @n  AS3935_ADD3  0x03   A0 = 1  A1 = 1
+ # @copyright   Copyright (c) 2010 DFRobot Co.Ltd (http://www.dfrobot.com)
+ # @licence     The MIT License (MIT)
+ # @author [TangJie](jie.tang@dfrobot.com)
+ # @version  V1.0.2
+ # @date  2019-09-28
+ # @url https://github.com/DFRobor/DFRobot_AS3935
+'''
+# Importazione delle librerie necessarie
+import sys
+sys.path.append('../')
+import time
+from DFRobot_AS3935_Lib import DFRobot_AS3935
+import RPi.GPIO as GPIO
+from datetime import datetime
+from firebase import firebase
+
+# Inizializzazione delle credenziali Firebase
+firebase_url = 'https://<your-firebase-project-id>.firebaseio.com/'
+firebase = firebase.FirebaseApplication(firebase_url, None)
+
+#I2C address
+AS3935_I2C_ADDR1 = 0X01
+AS3935_I2C_ADDR2 = 0X02
+AS3935_I2C_ADDR3 = 0X03
+
+
+#Antenna tuning capcitance (must be integer multiple of 8, 8 - 120 pf)
+AS3935_CAPACITANCE = 96
+IRQ_PIN = 7
+
+GPIO.setmode(GPIO.BOARD)
+
+# Inizializzazione del sensore AS3935
+sensor = DFRobot_AS3935(AS3935_I2C_ADDR3, bus=1)
+if sensor.reset():
+    print("Init sensor success.")
+else:
+    print("Init sensor fail")
+    while True:
+        pass
+
+#Configure sensor
+sensor.power_up()
+
+#set indoors or outdoors models
+#sensor.set_indoors()
+sensor.set_outdoors()
+
+#disturber detection
+sensor.disturber_en()
+#sensor.disturber_dis()
+
+sensor.set_irq_output_source(0)
+time.sleep(0.5)
+#set capacitance
+sensor.set_tuning_caps(AS3935_CAPACITANCE)
+
+# Connect the IRQ and GND pin to the oscilloscope.
+# uncomment the following sentences to fine tune the antenna for better performance.
+# This will dispaly the antenna's resonance frequency/16 on IRQ pin (The resonance frequency will be divided by 16 on this pin)
+# Tuning AS3935_CAPACITANCE to make the frequency within 500/16 kHz plus 3.5% to 500/16 kHz minus 3.5%
+#
+# sensor.setLco_fdiv(0)
+# sensor.setIrq_output_source(3)
+
+#Set the noise level,use a default value greater than 7
+sensor.set_noise_floor_lv1(2)
+#noiseLv = sensor.get_noise_floor_lv1()
+
+#used to modify WDTH,alues should only be between 0x00 and 0x0F (0 and 7)
+sensor.set_watchdog_threshold(2)
+#wtdgThreshold = sensor.get_watchdog_threshold()
+
+#used to modify SREJ (spike rejection),values should only be between 0x00 and 0x0F (0 and 7)
+sensor.set_spike_rejection(2)
+#spikeRejection = sensor.get_spike_rejection()
+
+#view all register data
+#sensor.print_all_regs()
+
+
+# Funzione di callback per la gestione degli interrupt
+def callback_handle(channel):
+    global sensor
+    time.sleep(0.005)
+    intSrc = sensor.get_interrupt_src()
+    
+    if intSrc == 1:
+        # Caso in cui l'interrupt è causato da un fulmine
+        lightning_distKm = sensor.get_lightning_distKm()
+        print('Lightning occurs!')
+        print('Distance: %dkm' % lightning_distKm)
+
+        lightning_energy_val = sensor.get_strike_energy_raw()
+        print('Intensity: %d ' % lightning_energy_val)
+        
+        # Invia dati a Firebase
+        data = {
+            'year': datetime.now().year,
+            'month': datetime.now().month,
+            'distance': lightning_distKm,
+            'timestamp': str(datetime.now()),
+            'total_lightning': 1
+        }
+
+        path = f'/il-tuo-progetto/lightning/data/{data["year"]:04d}/{data["month"]:02d}'
+
+        existing_data = firebase.get(path, None)
+
+        if existing_data:
+            total_lightning = 0
+            for push_id, push_data in existing_data.items():
+                total_lightning += push_data['total_lightning']
+            data['total_lightning'] += total_lightning
+
+        new_push_id = firebase.post(path, {'value': data})
+        print(f'Lightning data sent to Firebase at {path}/{new_push_id}')
+        
+    elif intSrc == 2:
+        # Caso in cui l'interrupt è causato dalla rilevazione di un disturbo
+        print('Disturber discovered!')
+        
+    elif intSrc == 3:
+        # Caso in cui l'interrupt è causato da un livello di rumore troppo alto
+        print('Noise level too high!')
+        
+    else:
+        # Altro caso (non dovrebbe verificarsi)
+        pass
+
+
+#Set to input mode
+GPIO.setup(IRQ_PIN, GPIO.IN)
+#Set the interrupt pin, the interrupt function, rising along the trigger
+GPIO.add_event_detect(IRQ_PIN, GPIO.RISING, callback = callback_handle)
+print("start lightning detect.")
+
+
+while True:
+    time.sleep(1.0)
+ 
